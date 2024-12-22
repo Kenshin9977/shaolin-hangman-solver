@@ -1,4 +1,5 @@
 import flet as ft
+import os
 
 word_codex = {
     "rave": [
@@ -107,6 +108,13 @@ def get_words_from_categories(categories):
     return matching_words
 
 
+def get_wyler_image(letter):
+    if not letter.isalpha():
+        return None
+    filename = f"{letter.upper()}_Wyler.png"
+    return filename
+
+
 def main(page: ft.Page):
     tries = []  # List to store entered letters
     current_prefix = ""  # Current prefix being formed
@@ -121,6 +129,19 @@ def main(page: ft.Page):
         possible_words_label.value = "Possible words: " + (
             ", ".join(possible_words) if possible_words else "None"
         )
+        page.update()
+
+    def translate_to_wyler(e):
+        input_text = translate_input.value.upper()
+        translation_images.controls.clear()
+
+        for char in input_text:
+            img_path = get_wyler_image(char)
+            if img_path:
+                translation_images.controls.append(ft.Image(src=img_path, width=50, height=50))
+            else:
+                translation_images.controls.append(ft.Text(f"[{char}]"))
+
         page.update()
 
     def update_possible_words_current_try(e):
@@ -175,11 +196,18 @@ def main(page: ft.Page):
     possible_words_label = ft.Text(
         value="Possible words: " + ", ".join(possible_words), size=14
     )
+    translate_input = ft.TextField(hint_text="Enter text to translate", on_change=translate_to_wyler)
+    translation_images = ft.GridView(
+        expand=True,
+        max_extent=60,
+        spacing=5,
+        run_spacing=5,
+    )
 
     # Layout for the input and controls
     input_row = ft.Row([try_input, add_button], spacing=10)
     layout = ft.Column(
-        [entered_letters_label, input_row, possible_words_label, reset_button],
+        [entered_letters_label, input_row, possible_words_label, reset_button, ft.Text(value="Wyler's Translator:"), translate_input, translation_images],
         spacing=20,
         expand=True,
     )
