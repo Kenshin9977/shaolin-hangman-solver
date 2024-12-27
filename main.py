@@ -24,6 +24,7 @@ word_codex = {
         "zapper",
         "forgefreeze",
         "bumpercars",
+        "yetieyes",
     ],
     "disco": [
         "rollerskates",
