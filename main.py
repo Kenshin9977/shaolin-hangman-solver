@@ -1,5 +1,4 @@
-import os
-from copy import deepcopy
+from collections import defaultdict
 
 import flet as ft
 
@@ -90,7 +89,6 @@ word_codex = {
     ],
 }
 
-# Normalize word_codex to uppercase
 word_codex = {k.upper(): [w.upper() for w in v] for k, v in word_codex.items()}
 
 
@@ -120,10 +118,46 @@ def get_matching_categories(tries):
     return matching_categories
 
 
-def get_words_from_categories(categories):
+def count_prefixes(strings):
+    prefix_count = defaultdict(int)
+    for string in strings:
+        for i in range(1, len(string) + 1):
+            prefix = string[:i]
+            prefix_count[prefix] += 1
+    return dict(
+        sorted(prefix_count.items(), key=lambda item: len(item[0]), reverse=True)
+    )
+
+
+def remove_matching_words(list1, list2):
+    prefixes_list1 = count_prefixes(list1)
+    prefixes_list2 = count_prefixes(list2)
+    words_to_remove = set()
+
+    for prefix in prefixes_list1:
+        if prefix in prefixes_list2:
+            list1_count_prefix = prefixes_list1[prefix]
+            list2_words_matching_prefix = [
+                word for word in list2 if word.startswith(prefix)
+            ]
+            if len(list2_words_matching_prefix) >= list1_count_prefix:
+                if list1_count_prefix >= len(list2_words_matching_prefix):
+                    words_to_remove.update(
+                        list2_words_matching_prefix[:list1_count_prefix]
+                    )
+
+    return [word for word in list2 if word not in words_to_remove]
+
+
+def get_words_from_categories(categories, tries):
     matching_words = []
+    if not tries:
+        return [w for category in categories for w in word_codex.get(category, [])]
+    tries_sorted = sorted(tries, key=len, reverse=True)
+
     for category in categories:
-        matching_words.extend(word_codex.get(category, []))
+        category_word = word_codex.get(category).copy()
+        matching_words.extend(remove_matching_words(tries_sorted, category_word))
     return matching_words
 
 
@@ -135,16 +169,15 @@ def get_wyler_image(letter):
 
 
 def main(page: ft.Page):
-    tries = []  # List to store entered letters
-    current_prefix = ""  # Current prefix being formed
+    tries = []
+    current_prefix = ""
     possible_categories = get_matching_categories(tries)
-    possible_words = get_words_from_categories(possible_categories)
+    possible_words = get_words_from_categories(possible_categories, tries)
 
-    # Function to update the remaining possible words based on the entered letters
     def update_possible_words():
         nonlocal tries
         possible_categories = get_matching_categories(tries)
-        possible_words = get_words_from_categories(possible_categories)
+        possible_words = get_words_from_categories(possible_categories, tries)
         possible_words_label.value = "Possible words: " + (
             ", ".join(possible_words) if possible_words else "None"
         )
@@ -170,42 +203,36 @@ def main(page: ft.Page):
         dynamic_tries = tries.copy()
         dynamic_tries.append(try_input.value.upper())
         possible_categories = get_matching_categories(dynamic_tries)
-        words_cat = get_words_from_categories(possible_categories)
+        words_cat = get_words_from_categories(possible_categories, tries)
         possible_words = [w for w in words_cat if w.startswith(try_input.value.upper())]
         possible_words_label.value = "Possible words: " + (
             ", ".join(possible_words) if possible_words else "None"
         )
         page.update()
 
-    # Function to handle the letter input and update the current prefix
     def add_try(e):
         nonlocal current_prefix, tries
 
-        # Get the letter entered and update the prefix
         if try_input.value:
             current_try = try_input.value.upper()
             tries.append(current_try)
             current_prefix = "".join(tries)
 
-            # Update the entered letters label
             try_input.value = ""
             entered_letters_label.value = "Entered tries: " + " ".join(tries)
             update_possible_words()
 
-    # Function to reset the game
     def reset_game(e):
         nonlocal tries, current_prefix, possible_words
         tries = []
         current_prefix = ""
         possible_words = [word for words in word_codex.values() for word in words]
 
-        # Update the UI elements
         entered_letters_label.value = "Entered tries: "
         possible_words_label.value = "Possible words: " + ", ".join(possible_words)
         try_input.value = ""
         page.update()
 
-    # Create UI components
     entered_letters_label = ft.Text(value="Previous tries: ", size=14)
     try_input = ft.TextField(
         hint_text="Displayed letter(s)",
@@ -227,7 +254,6 @@ def main(page: ft.Page):
         run_spacing=5,
     )
 
-    # Layout for the input and controls
     input_row = ft.Row([try_input, add_button], spacing=10)
     layout = ft.Column(
         [
@@ -243,7 +269,6 @@ def main(page: ft.Page):
         expand=True,
     )
 
-    # Set up the page title and add the layout
     page.title = "Shaolin hangman solver"
     page.add(layout)
 
