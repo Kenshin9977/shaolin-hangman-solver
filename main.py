@@ -1,5 +1,7 @@
-import flet as ft
 import os
+from copy import deepcopy
+
+import flet as ft
 
 word_codex = {
     "rave": [
@@ -92,13 +94,29 @@ word_codex = {
 word_codex = {k.upper(): [w.upper() for w in v] for k, v in word_codex.items()}
 
 
-def get_matching_categories(tries: list):
-    if not tries or tries == [""]:
-        return list(word_codex.keys())
+def get_matching_categories(tries):
     matching_categories = []
+
+    tries_sorted = sorted(tries, key=len, reverse=True)
+
     for category, word_list in word_codex.items():
-        if all(any(w.startswith(word) for w in word_list) for word in tries):
+        remaining_words = word_list.copy()
+        category_matches = True
+
+        for word_prefix in tries_sorted:
+            matching_word = next(
+                (word for word in remaining_words if word.startswith(word_prefix)), None
+            )
+
+            if matching_word:
+                remaining_words.remove(matching_word)
+            else:
+                category_matches = False
+                break
+
+        if category_matches:
             matching_categories.append(category)
+
     return matching_categories
 
 
@@ -139,7 +157,9 @@ def main(page: ft.Page):
         for char in input_text:
             img_path = get_wyler_image(char)
             if img_path:
-                translation_images.controls.append(ft.Image(src=img_path, width=50, height=50))
+                translation_images.controls.append(
+                    ft.Image(src=img_path, width=50, height=50)
+                )
             else:
                 translation_images.controls.append(ft.Text(f"[{char}]"))
 
@@ -197,7 +217,9 @@ def main(page: ft.Page):
     possible_words_label = ft.Text(
         value="Possible words: " + ", ".join(possible_words), size=14
     )
-    translate_input = ft.TextField(hint_text="Enter text to translate", on_change=translate_to_wyler)
+    translate_input = ft.TextField(
+        hint_text="Enter text to translate", on_change=translate_to_wyler
+    )
     translation_images = ft.GridView(
         expand=True,
         max_extent=60,
@@ -208,7 +230,15 @@ def main(page: ft.Page):
     # Layout for the input and controls
     input_row = ft.Row([try_input, add_button], spacing=10)
     layout = ft.Column(
-        [entered_letters_label, input_row, possible_words_label, reset_button, ft.Text(value="Wyler's Translator:"), translate_input, translation_images],
+        [
+            entered_letters_label,
+            input_row,
+            possible_words_label,
+            reset_button,
+            ft.Text(value="Wyler's Translator:"),
+            translate_input,
+            translation_images,
+        ],
         spacing=20,
         expand=True,
     )
