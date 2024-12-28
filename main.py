@@ -181,6 +181,7 @@ def main(page: ft.Page):
         possible_words_label.value = "Possible words: " + (
             ", ".join(possible_words) if possible_words else "None"
         )
+
         page.update()
 
     def translate_to_wyler(e):
@@ -208,6 +209,11 @@ def main(page: ft.Page):
         possible_words_label.value = "Possible words: " + (
             ", ".join(possible_words) if possible_words else "None"
         )
+
+        if len(possible_words) == 1:
+            translate_input.value = possible_words[0]
+            translate_to_wyler(None)
+
         page.update()
 
     def add_try(e):
